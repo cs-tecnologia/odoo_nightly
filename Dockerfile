@@ -7,6 +7,7 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 # Generate locale C.UTF-8 for postgres and general locale data
 ENV LANG C.UTF-8
 
+
 # Install some deps, lessc and less-plugin-clean-css, and wkhtmltopdf
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -15,6 +16,7 @@ RUN apt-get update && \
         wget \
         dirmngr \
         fonts-noto-cjk \
+        git \
         gnupg \
         libssl-dev \
         node-less \
@@ -80,11 +82,47 @@ RUN chown odoo /etc/odoo/odoo.conf \
     && chown -R odoo /mnt/extra-addons
 VOLUME ["/var/lib/odoo", "/mnt/extra-addons"]
 
+RUN set -x; \
+        #useradd -l --create-home --home-dir /var/lib/odoo --no-log-init odoo &&\
+        /bin/bash -c "mkdir -p /var/lib/odoo/{log,additional_addons}" &&\
+        git clone -b 14.0 --depth 1 https://github.com/OCA/l10n-brazil.git ./10n-brazil &&\
+        pip3 install -r ./10n-brazil/requirements.txt &&\
+		#
+        git clone -b 14.0 --depth 1 https://github.com/OCA/account-invoicing.git ./account-invoicing &&\
+        pip3 install -r ./account-invoicing/requirements.txt &&\
+		#
+        git clone -b 14.0 --depth 1 https://github.com/OCA/account-payment.git ./account-payment &&\
+        pip3 install -r ./account-payment/requirements.txt &&\
+		#
+        git clone -b 14.0 --depth 1 https://github.com/OCA/bank-payment.git  ./bank-payment &&\
+        pip3 install -r ./bank-payment/requirements.txt &&\
+		#
+        git clone -b 14.0 --depth 1 https://github.com/OCA/delivery-carrier.git  ./delivery-carrier  &&\
+        pip3 install -r ./delivery-carrier/requirements.txt &&\
+		#
+        git clone -b 14.0 --depth 1 https://github.com/OCA/mis-builder.git  ./mis-builder &&\
+        #pip3 install -r ./mis-builder/requirements.txt &&\
+		#
+        git clone -b 14.0 --depth 1 https://github.com/OCA/stock-logistics-workflow.git   ./stock-logistics-workflow   &&\
+        pip3 install -r ./stock-logistics-workflow/requirements.txt &&\
+		#
+        git clone -b 14.0 --depth 1 https://github.com/OCA/account-reconcile.git   ./account-reconcile  &&\
+        pip3 install -r ./account-reconcile/requirements.txt &&\
+		#
+        git clone -b 14.0 --depth 1 https://github.com/OCA/currency.git   ./currency  &&\
+        #pip3 install -r ./currency/requirements.txt &&\
+		#
+        git clone -b 14.0 --depth 1 https://github.com/OCA/purchase-workflow.git   ./purchase-workflow  &&\
+        #pip3 install -r ./purchase-workflow/requirements.txt &&\
+		#
+        git clone -b 14.0 --depth 1 https://github.com/OCA/sale-workflow.git   ./sale-workflow   &&\
+        pip3 install -r ./sale-workflow/requirements.txt 
+
 # Adicionar localização brasileira
 RUN apt-get update -y && apt-get upgrade -y  \
     && apt-get install -y --no-install-recommends ${APT_DEPS} \
-    && pip install pyOpenSSL==20.0.1 \
-    && pip install signxml==2.9 \
+    #&& pip install pyOpenSSL==20.0.1 \
+    #&& pip install signxml==2.9.0 \
     #&& pip install certifi==2022.9.24 \
     #&& pip install pyOpenSSL==20.0.1 \
     #&& pip install signxml==2.9 \
@@ -115,40 +153,6 @@ RUN apt-get update -y && apt-get upgrade -y  \
     #&& pip install zope.interface==5.5.1 \        
     && pip3 install -r https://raw.githubusercontent.com/OCA/l10n-brazil/14.0/requirements.txt \
     && apt-get -y autoremove 
-
-RUN set -x; \
-        git clone -b 14.0 --depth 1 https://github.com/OCA/l10n-brazil.git /mnt/extra-addons/l10n-brazil &&\
-        pip3 install -r /mnt/extra-addons/l10n-brazil/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/account-invoicing.git /mnt/extra-addons/account-invoicing &&\
-        pip3 install -r opt/odoo/additional_addons/account-invoicing/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/account-payment.git /mnt/extra-addons/account-payment &&\
-        pip3 install -r /mnt/extra-addons/account-payment/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/bank-payment.git  /mnt/extra-addons/bank-payment &&\
-        pip3 install -r /mnt/extra-addons/bank-payment/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/delivery-carrier.git  /mnt/extra-addons/delivery-carrier  &&\
-        pip3 install -r /mnt/extra-addons/delivery-carrier/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/mis-builder.git  /mnt/extra-addons/mis-builder &&\
-        #pip3 install -r /mnt/extra-addons/mis-builder/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/stock-logistics-workflow.git   /mnt/extra-addons/stock-logistics-workflow   &&\
-        pip3 install -r /mnt/extra-addons/stock-logistics-workflow/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/account-reconcile.git   /mnt/extra-addons/account-reconcile  &&\
-        pip3 install -r /mnt/extra-addons/account-reconcile/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/currency.git   /mnt/extra-addons/currency  &&\
-        #pip3 install -r /mnt/extra-addons/currency/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/purchase-workflow.git   /mnt/extra-addons/purchase-workflow  &&\
-        #pip3 install -r /mnt/extra-addons/purchase-workflow/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/sale-workflow.git   /mnt/extra-addons/sale-workflow   &&\
-        pip3 install -r /mnt/extra-addons/sale-workflow/requirements.txt 
         
 # Expose Odoo services
 EXPOSE 8069 8071 8072
