@@ -1,4 +1,5 @@
-FROM debian:bullseye-slim
+#FROM debian:bullseye-slim
+FROM python:3.10-slim-bullseye
 #FROM debian:buster-slim
 #MAINTAINER Odoo S.A. <info@odoo.com>
 
@@ -6,40 +7,98 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 # Generate locale C.UTF-8 for postgres and general locale data
 ENV LANG C.UTF-8
+ENV APT_DEPS='build-essential libldap2-dev libpq-dev libsasl2-dev' \
+    PIP_ROOT_USER_ACTION=ignore 
 
+###Criar usuario Odoo
+RUN useradd -m -U -r -d /opt/odoo -s /bin/bash odoo &&\
+/bin/bash -c "mkdir -p /opt/odoo/{etc,log,addons}" &&\
+chown -R odoo:odoo /opt/odoo &&\
+mkdir -p /var/lib/odoo && \
+chown -R odoo:odoo /var/lib/odoo/
 
 # Install some deps, lessc and less-plugin-clean-css, and wkhtmltopdf
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        ca-certificates \
-        curl \
-        wget \
-        dirmngr \
-        fonts-noto-cjk \
-        git \
-        gnupg \
-        libssl-dev \
-        node-less \
-        npm \
-        python3-num2words \
-        python3-pdfminer \
-        python3-pip \
-        python3-phonenumbers \
-        python3-pyldap \
-        python3-qrcode \
-        python3-renderpm \
-        python3-setuptools \
-        python3-slugify \
-        python3-vobject \
-        python3-watchdog \
-        python3-xlrd \
-        python3-xlwt \
-        xz-utils \
-    #&& curl -o wkhtmltox.deb -sSL https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.buster_amd64.deb \
-    #&& curl -o wkhtmltox.deb -sSL https://github.com/wkhtmltopdf/wkhtmltopdf/releases//download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.bullseye_amd64.deb \
-    #&& echo 'ea8277df4297afc507c61122f3c349af142f31e5 wkhtmltox.deb' | sha1sum -c - \
-    #&& apt-get install -y --no-install-recommends ./wkhtmltox.deb \
-    #&& rm -rf /var/lib/apt/lists/* wkhtmltox.deb
+    build-essential \
+    ca-certificates \
+    curl \
+    wget \
+    swig \
+    default-jre \
+    ure \
+    dirmngr \
+    fonts-noto-cjk \
+    fonts-symbola \
+    git \
+    gnupg \
+    gnupg1 \
+    gnupg2 \
+    pkg-config \
+    ldap-utils \
+    libcups2-dev \
+    libevent-dev \
+    libffi-dev \
+    libfreetype6-dev \
+    libfribidi-dev \
+    libharfbuzz-dev \
+    libjpeg-dev \
+    liblcms2-dev \
+    libldap2-dev \
+    libopenjp2-7-dev \
+    libjpeg62-turbo \
+    libpng-dev \
+    libpq-dev \
+    libreoffice-java-common \
+    libreoffice-writer \
+    libsasl2-dev \
+    libsnmp-dev \
+    libssl-dev \
+    libtiff5-dev \
+    libwebp-dev \
+    libxcb1-dev \
+    libxml2-dev \
+    libxml2-dev \
+    libxmlsec1-dev \
+    libxslt1-dev \
+    libzip-dev \
+    locales \
+    node-clean-css \
+    nodejs \ 
+    node-less \
+    npm \
+    openssh-client \
+    python3 \
+    python3-dev \
+    python3-dev nodejs \
+    python3-lxml \
+    python3-num2words \
+    python3-pdfminer \
+    python3-phonenumbers \
+    python3-pip \
+    python3-pyldap \
+    python3-qrcode \
+    python3-renderpm \
+    python3-setuptools \
+    python3-slugify \
+    python3-suds \
+    python3-venv \
+    python3-vobject \
+    python3-watchdog \
+    python3-wheel \
+    python3-xlrd \
+    python3-xlwt \
+    texlive-fonts-extra \
+    wkhtmltopdf \
+    xfonts-75dpi \
+    xfonts-base \
+    xz-utils \
+    zlib1g-dev \
+###Dependências de relatórios
+    #wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.bullseye_amd64.deb && \
+    #dpkg -i ./wkhtmltox_0.12.6.1-2.bullseye_amd64.deb && \
+    #rm -f wkhtmltox_0.12.6.1-2.bullseye_amd64.deb && \
+    #apt -f install -y        
     && wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.bullseye_amd64.deb \
     && apt-get install -y ./wkhtmltox_0.12.6.1-2.bullseye_amd64.deb \    
     && rm -rf /var/lib/apt/lists/* wkhtmltox_0.12.6.1-2.bullseye_amd64.deb
@@ -62,67 +121,81 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ bullseye-pgdg main' > /et
 # Install rtlcss (on Debian bullseye)
 RUN npm install -g rtlcss
 
-# Install Odoo
-ENV ODOO_VERSION 14.0
-ARG ODOO_RELEASE=20221202
-ARG ODOO_SHA=41a75eecbf06b0adfc5537a476e406d28557f938
-RUN curl -o odoo.deb -sSL http://nightly.odoo.com/${ODOO_VERSION}/nightly/deb/odoo_${ODOO_VERSION}.${ODOO_RELEASE}_all.deb \
-    && echo "${ODOO_SHA} odoo.deb" | sha1sum -c - \
-    && apt-get update \
-    && apt-get -y install --no-install-recommends ./odoo.deb \
-    && rm -rf /var/lib/apt/lists/* odoo.deb
-
-# Copy entrypoint script and Odoo configuration file
-COPY ./entrypoint.sh /
-COPY ./odoo.conf /etc/odoo/
-
-# Set permissions and Mount /var/lib/odoo to allow restoring filestore and /mnt/extra-addons for users addons
-RUN chown odoo /etc/odoo/odoo.conf \
-    && mkdir -p /mnt/extra-addons \
-    && chown -R odoo /mnt/extra-addons
-VOLUME ["/var/lib/odoo", "/mnt/extra-addons"]
+###Instalar dependências do odoo e o odoo
+RUN set -x; \
+pip3 install -r https://github.com/odoo/odoo/raw/14.0/requirements.txt && \
+wget -O - https://nightly.odoo.com/odoo.key | apt-key add - && \
+echo "deb http://nightly.odoo.com/14.0/nightly/deb/ ./" >> /etc/apt/sources.list.d/odoo.list && \
+apt update ; apt upgrade -y && \
+apt install odoo -y && \
+pip3 install pyopenssl --upgrade
 
 RUN set -x; \
-        #useradd -l --create-home --home-dir /var/lib/odoo --no-log-init odoo &&\
-        /bin/bash -c "mkdir -p /var/lib/odoo/{log,additional_addons}" &&\
-        git clone -b 14.0 --depth 1 https://github.com/OCA/l10n-brazil.git ./10n-brazil &&\
-        pip3 install -r ./10n-brazil/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/account-invoicing.git ./account-invoicing &&\
-        pip3 install -r ./account-invoicing/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/account-payment.git ./account-payment &&\
-        pip3 install -r ./account-payment/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/bank-payment.git  ./bank-payment &&\
-        pip3 install -r ./bank-payment/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/delivery-carrier.git  ./delivery-carrier  &&\
-        pip3 install -r ./delivery-carrier/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/mis-builder.git  ./mis-builder &&\
-        #pip3 install -r ./mis-builder/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/stock-logistics-workflow.git   ./stock-logistics-workflow   &&\
-        pip3 install -r ./stock-logistics-workflow/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/account-reconcile.git   ./account-reconcile  &&\
-        pip3 install -r ./account-reconcile/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/currency.git   ./currency  &&\
-        #pip3 install -r ./currency/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/purchase-workflow.git   ./purchase-workflow  &&\
-        #pip3 install -r ./purchase-workflow/requirements.txt &&\
-		#
-        git clone -b 14.0 --depth 1 https://github.com/OCA/sale-workflow.git   ./sale-workflow   &&\
-        pip3 install -r ./sale-workflow/requirements.txt 
+        #Educação
+        #git clone --depth 1 --branch 14.0 https://github.com/openeducat/openeducat_erp
+        #ISP somente 12
+        #git clone --depth 1 --branch 14.0 https://github.com/OCA/vertical-isp
+        #HelpDesk
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/helpdesk /opt/odoo/addons/helpdesk &&\
+        #pip3 install -r /opt/odoo/addons/helpdesk/requirements.txt &&\
+        #Serviço de campo
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/field-service /opt/odoo/addons/field-service &&\
+        pip3 install -r  /opt/odoo/addons/field-service/requirements.txt &&\
+        #conector telefonia
+        #git clone --depth 1 --branch 14.0 https://github.com/OCA/connector-telephony /opt/odoo/addons/l10n-brazil &&\
+        #pip3 install -r  /opt/odoo/addons/l10n-brazil/requirements.txt  &&\
+        #l10n-brazil
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/l10n-brazil /opt/odoo/addons/l10n-brazil &&\
+        pip3 install -r  /opt/odoo/addons/l10n-brazil/requirements.txt  &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/currency /opt/odoo/addons/currency &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/bank-payment /opt/odoo/addons/bank-payment &&\
+        pip3 install -r  /opt/odoo/addons/bank-payment/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/account-payment /opt/odoo/addons/account-payment &&\
+        pip3 install -r  /opt/odoo/addons/account-payment/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/account-invoicing /opt/odoo/addons/account-invoicing &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/account-reconcile  /opt/odoo/addons/account-reconcile &&\
+        pip3 install -r  /opt/odoo/addons/account-reconcile/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/mis-builder  /opt/odoo/addons/mis-builder &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/reporting-engine /opt/odoo/addons/reporting-engine &&\
+        pip3 install -r  /opt/odoo/addons/reporting-engine/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/server-tools  /opt/odoo/addons/server-tools &&\
+        pip3 install -r  /opt/odoo/addons/server-tools/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/queue /opt/odoo/addons/queue &&\
+        pip3 install -r  /opt/odoo/addons/queue/requirements.txt &&\
+        #git clone --depth 1 --branch 14.0 https://github.com/OCA/web /opt/odoo/addons/web &&\
+        #pip3 install -r  /opt/odoo/addons/web/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/contract /opt/odoo/addons/contract &&\
+        pip3 install -r  /opt/odoo/addons/contract/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/manufacture /opt/odoo/addons/manufacture &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/account-analytic /opt/odoo/addons/account-analytic &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/stock-logistics-warehouse /opt/odoo/addons/stock-logistics-warehouse &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/server-ux /opt/odoo/addons/server-ux &&\
+        pip3 install -r  /opt/odoo/addons/server-ux/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/product-attribute /opt/odoo/addons/product-attribute &&\
+        pip3 install -r  /opt/odoo/addons/product-attribute/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/stock-logistics-workflow /opt/odoo/addons/stock-logistics-workflow &&\
+        pip3 install -r  /opt/odoo/addons/stock-logistics-workflow/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/purchase-workflow /opt/odoo/addons/purchase-workflow &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/sale-workflow /opt/odoo/addons/sale-workflow &&\
+        pip3 install -r  /opt/odoo/addons/sale-workflow/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/delivery-carrier /opt/odoo/addons/delivery-carrier &&\
+        pip3 install -r  /opt/odoo/addons/delivery-carrier/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/partner-contact /opt/odoo/addons/partner-contact &&\
+        pip3 install -r  /opt/odoo/addons/partner-contact/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/commission /opt/odoo/addons/commission &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/edi /opt/odoo/addons/edi &&\
+        pip3 install -r  /opt/odoo/addons/edi/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/community-data-files /opt/odoo/addons/community-data-files &&\
+        pip3 install -r  /opt/odoo/addons/community-data-files/requirements.txt &&\
+        git clone --depth 1 --branch 14.0 https://github.com/OCA/manufacture-reporting /opt/odoo/addons/manufacture-reporting &&\
+        pip install -e git+https://github.com/Engenere/erpbrasil.assinatura@fix-namespaces#egg=erpbrasil.assinatura
 
 # Adicionar localização brasileira
 RUN apt-get update -y && apt-get upgrade -y  \
     && apt-get install -y --no-install-recommends ${APT_DEPS} \
-    #&& pip install pyOpenSSL==20.0.1 \
+    #&& pip install email_validator \   
     #&& pip install signxml==2.9.0 \
+    #&& pip install psycopg2 \
     #&& pip install certifi==2022.9.24 \
     #&& pip install pyOpenSSL==20.0.1 \
     #&& pip install signxml==2.9 \
@@ -152,18 +225,28 @@ RUN apt-get update -y && apt-get upgrade -y  \
     #&& pip install yarl==1.8.1 \
     #&& pip install zope.interface==5.5.1 \        
     && pip3 install -r https://raw.githubusercontent.com/OCA/l10n-brazil/14.0/requirements.txt \
-    && apt-get -y autoremove 
-        
+    && apt-get -y autoremove  \
+    && chown -R odoo:odoo /opt/odoo/addons/
+
+# Set the default config file
+COPY ./entrypoint.sh /
+COPY ./odoo.conf /opt/odoo/etc/odoo.conf
+RUN chown odoo:odoo /opt/odoo/etc/odoo.conf
+
+
 # Expose Odoo services
 EXPOSE 8069 8071 8072
 
 # Set the default config file
-ENV ODOO_RC /etc/odoo/odoo.conf
-
+ENV ODOO_RC /opt/odoo/etc/odoo.conf
 COPY wait-for-psql.py /usr/local/bin/wait-for-psql.py
+
+# Mount /opt/odoo/data to allow restoring filestore
+VOLUME ["/opt/odoo/addons/"]
 
 # Set default user when running the container
 USER odoo
 
+# Start
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["odoo"]
